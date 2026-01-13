@@ -1,91 +1,80 @@
-# 👁️ WatchYourDay: The Silent Observer
-**Enterprise-Grade Automated Activity Tracking & Intelligence System**
+# WatchYourDay: Automated Activity Tracker
+**Native macOS Activity Tracking & Intelligence System**
 
-> *Veritas in Data. Privacy by Design.*
+> *Privacy-First. Local-First. Automated.*
 
 ---
 
 ## 📖 Table of Contents
-1. [Executive Summary](#1-executive-summary)
-2. [Core Philosophy](#2-core-philosophy)
-3. [Feature Suite](#3-feature-suite)
-4. [User Manual](#4-user-manual)
-5. [Privacy Manifesto](#5-privacy-manifesto)
-6. [Technical Architecture](#6-technical-architecture)
+1. [Overview](#1-overview)
+2. [Core Concepts](#2-core-concepts)
+3. [Features](#3-features)
+4. [User Guide](#4-user-guide)
+5. [Privacy & Security](#5-privacy--security)
+6. [Architecture](#6-architecture)
 
 ---
 
-## 1. Executive Summary
-**WatchYourDay** is not just a time tracker; it is an intelligent, autonomous system designed to capture the "Truth of Work" without user intervention. By leveraging native macOS frameworks like `ScreenCaptureKit`, `Vision`, and `CoreML` (via Ollama), it constructs a pixel-perfect history of your digital life while respecting the sanctity of your privacy.
+## 1. Overview
+**WatchYourDay** is a macOS utility designed to automatically track your daily digital activities. Unlike manual time trackers, it runs in the background and captures the "truth" of your work day without requiring you to start or stop timers.
 
-Built with **Swift 6** and **SwiftData**, it represents the state-of-the-art in modern macOS development, featuring a stealth-mode agent architecture that runs silently in the background.
+It uses native macOS frameworks like `ScreenCaptureKit` for high-performance recording and `Vision` for on-device OCR and text analysis. The goal is to provide you with insights into your productivity while keeping all your data strictly on your device.
 
-## 2. Core Philosophy
-1.  **Invisibility:** The observer effect should be zero. The app runs without a Dock icon, living quietly in the Menu Bar.
-2.  **Intelligence:** Raw data is useless. We transform pixels into text (OCR), text into context (Categorization), and context into insight (AI Summaries).
-3.  **Sovereignty:** Your data never leaves your device. All processing—OCR, Redaction, AI Analysis—happens on `localhost`.
+## 2. Core Concepts
+1.  **Unobtrusive:** The app runs as a Menu Bar agent (`LSUIElement`). It has no Dock icon and doesn't clutter your workspace.
+2.  **Intelligent:** It doesn't just save screenshots; it reads the text inside them to understand context (e.g., distinguishing between different project files).
+3.  **Local Sovereignty:** No data is ever sent to the cloud. All processing happens on `localhost`.
 
-## 3. Feature Suite
+## 3. Features
 
-### 🕵️ Stealth Agent (New)
-Operates as a strictly `LSUIElement` background process.
-- **No Dock Icon:** Does not clutter your workspace.
-- **Menu Bar Control:** Minimal footprint execution.
-- **Auto-Start:** Integrates with `SMAppService` for reliable launch-at-login.
+### 🕵️ Stealth Agent
+- **Background Execution:** Runs silently in the background.
+- **Launch at Login:** Configurable auto-start via system settings.
 
-### 🛡️ Privacy Shield
-- **Blacklist Manager:** Kernel-level exclusion of sensitive apps (Banking, Password Managers) before frame processing.
-- **On-Device Redaction:** Automatically detects and blurs sensitive text (PII) using Apple's Vision framework.
+### 🛡️ Privacy Controls
+- **Blacklist:** You can exclude specific apps (like Password Managers or Banking apps) from ever being recorded.
+- **Auto-Redaction:** Detects potential PII on screen and attempts to blur it before saving.
 
-### 🧠 Intelligent Search
-- **OCR Engine:** Indexes all text on your screen in real-time.
-- **Universal Query:** Search for "Invoice #1234" or "Function XYZ" and instantly jump to that moment in time.
+### 🧠 Search & History
+- **OCR Search:** Search for text that appeared on your screen. Useful for finding "that one document" you saw earlier.
+- **Timeline:** Visual history of your day.
 
-### 🤖 AI Analyst
-- **Ollama Integration:** Connects to local LLMs (Llama3, Mistral) to generate human-readable daily reports.
-- **Insight Engine:** "You spent 4 hours in Xcode but switched context 15 times."
+### 🤖 Local AI Summary
+- **Ollama Support:** Connects to a local running instance of Ollama to generate text summaries of your day (e.g., "Spent 3 hours on iOS Development").
 
-## 4. User Manual
+## 4. User Guide
 
 ### Getting Started
-1.  **Launch:** The app starts silently. Look for the "Eye" icon in the menu bar.
-2.  **Dashboard:** Click the menu bar icon -> "Open Dashboard" (or Press `Cmd+O` if configured).
-3.  **Permissions:** Grant Screen Recording access when prompted.
+1.  **Launch:** Open the app. It will appear in your Menu Bar (Eye icon).
+2.  **Dashboard:** Click the icon -> "Open Dashboard".
+3.  **Permissions:** You must grant "Screen Recording" permission in System Settings for the app to function.
 
-### Using the Dashboard
-- **Timeline:** Scroll through your day visually.
-- **Stats:** View focus breakdown and request AI Analysis.
-- **Search:** Use the Magnifying Glass to find historical content.
-- **Settings:** Configure Blacklist and Data Retention policies (Default: 30 Days).
+### Dashboard Usage
+- **Timeline Tab:** Scroll through captured snapshots.
+- **Stats Tab:** View time distribution across apps and generic AI insights.
+- **Search Tab:** Find specific text in your history.
+- **Settings:** Manage blacklist and data retention (auto-delete after 30 days).
 
-## 5. Privacy Manifesto
-We believe privacy is a fundamental human right.
-- **Local First:** No data is sent to cloud servers. Check our network traffic; you will only see `localhost`.
-- **Encryption:** (Roadmap) Database encryption at rest.
-- **Transparency:** Open source code allows full auditability.
+## 5. Privacy & Security
+This project was built with a strict "Local Only" policy.
+- **No Analytics:** We do not track how you use the app.
+- **No Cloud Uploads:** Your images and database (`SwiftData`) live in your local Application Support folder.
+- **Direct AI Connection:** AI requests go directly to `http://localhost:11434`.
 
-## 6. Technical Architecture
+## 6. Architecture
 
-### The Pipeline
-```mermaid
-graph LR
-    A[ScreenCaptureKit] --> B[Frame Buffer]
-    B --> C{Blacklist Check}
-    C -- Allowed --> D[Vision & Redaction]
-    C -- Blocked --> X[Discard]
-    D --> E[OCR Engine]
-    E --> F[SwiftData Storage]
-    F --> G[Background Indexing]
-```
+### Technical Stack
+- **Languages:** Swift 6.0
+- **UI:** SwiftUI (Dashboard) + AppKit (Window Management)
+- **Database:** SwiftData (SQLite)
+- **AI Integration:** REST API to Ollama
 
-### Tech Stack
-- **Language:** Swift 6.0
-- **UI:** SwiftUI + AppKit (Hybrid)
-- **Data:** SwiftData (Persistent CloudKit-ready Schema)
-- **Concurrency:** Swift Actors (`ScreenCaptureService`, `AIService`)
-- **AI:** Ollama API Bridge
+### Pipeline
+1.  **Capture:** `ScreenCaptureKit` grabs a frame.
+2.  **Filter:** Checks if the frontmost app is in the Blacklist.
+3.  **Process:** Extracts text (OCR) and blurs sensitive regions (Vision).
+4.  **Store:** Saves compressed image and metadata.
 
 ---
 
-*Generated by Antigravity for Dogan*
-*Version 2.0.0 (Enterprise Gold)*
+*Developed by Şenol Doğan*
