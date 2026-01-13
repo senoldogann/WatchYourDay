@@ -3,7 +3,7 @@ import SwiftUI
 enum SidebarTab: String, CaseIterable {
 
     case timeline = "clock"
-    case search = "magnifyingglass"
+    case chat = "bubble.left.and.bubble.right"
     case stats = "chart.pie"
     case settings = "gear"
 }

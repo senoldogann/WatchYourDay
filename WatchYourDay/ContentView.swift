@@ -155,8 +155,8 @@ struct ContentView: View {
                 }
             )
             
-        case .search:
-            SearchView(selectedSnapshot: $selectedSnapshot)
+        case .chat:
+            ChatView()
             
         case .stats:
             StatsView()
