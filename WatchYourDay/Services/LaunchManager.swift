@@ -13,7 +13,10 @@ class LaunchManager: ObservableObject {
         self.isEnabled = SMAppService.mainApp.status == .enabled
     }
     
-    func toggleLaunchAtLogin(enabled: Bool) {
+    var isLaunchAtLoginEnabled: Bool { isEnabled }
+    
+    func configureLaunchAtLogin(enabled: Bool) throws {
+        // Throwing version allows caller to handle errors if needed
         do {
             if enabled {
                 if SMAppService.mainApp.status == .enabled { return }
@@ -22,16 +25,16 @@ class LaunchManager: ObservableObject {
                 if SMAppService.mainApp.status == .notFound { return }
                 try SMAppService.mainApp.unregister()
             }
-            // Update state on main thread if needed, or published property handles it
+            
             DispatchQueue.main.async {
                 self.isEnabled = enabled
             }
         } catch {
             print("Failed to toggle Launch at Login: \(error)")
-            // Revert state if failed
             DispatchQueue.main.async {
                 self.isEnabled = SMAppService.mainApp.status == .enabled
             }
+            throw error
         }
     }
 }

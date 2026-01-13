@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Export method: development for unsigned builds, developer-id for signed -->
+    <key>method</key>
+    <string>development</string>
+    
+    <!-- Signing style -->
+    <key>signingStyle</key>
+    <string>automatic</string>
+    
+    <!-- Team ID (optional for development builds) -->
+    <!-- <key>teamID</key> -->
+    <!-- <string>YOUR_TEAM_ID</string> -->
+    
+    <!-- Strip Swift symbols for smaller binary -->
+    <key>stripSwiftSymbols</key>
+    <true/>
+    
+    <!-- Thin for specific architecture (universal by default) -->
+    <!-- <key>thinning</key> -->
+    <!-- <string>thin-for-all-variants</string> -->
+    
+    <!-- Upload symbols to Apple for crash reports -->
+    <key>uploadSymbols</key>
+    <false/>
+    
+    <!-- Compile bitcode (not applicable for macOS) -->
+    <key>compileBitcode</key>
+    <false/>
+</dict>
+</plist>

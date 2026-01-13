@@ -81,7 +81,7 @@ struct SettingsView: View {
             
             Toggle(isOn: Binding(
                 get: { launchManager.isEnabled },
-                set: { launchManager.toggleLaunchAtLogin(enabled: $0) }
+                set: { try? launchManager.configureLaunchAtLogin(enabled: $0) }
             )) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Launch at Login")

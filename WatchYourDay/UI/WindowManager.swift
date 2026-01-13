@@ -64,4 +64,40 @@ class WindowManager {
         
         self.window = newWindow
     }
+    
+    // MARK: - Onboarding Window
+    
+    var onboardingWindow: NSWindow?
+    
+    func openOnboarding(onFinish: @escaping () -> Void) {
+        if onboardingWindow == nil {
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 600, height: 500),
+                styleMask: [.titled, .fullSizeContentView], // No closable mask to force completion
+                backing: .buffered,
+                defer: false
+            )
+            
+            window.title = "Welcome"
+            window.center()
+            window.titlebarAppearsTransparent = true
+            window.isMovableByWindowBackground = true
+            
+            let onboardingView = OnboardingView {
+                onFinish()
+                self.closeOnboarding()
+            }
+            
+            window.contentViewController = NSHostingController(rootView: onboardingView)
+            self.onboardingWindow = window
+        }
+        
+        onboardingWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+    
+    func closeOnboarding() {
+        onboardingWindow?.orderOut(nil)
+        onboardingWindow = nil
+    }
 }

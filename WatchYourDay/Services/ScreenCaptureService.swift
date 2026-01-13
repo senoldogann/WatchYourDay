@@ -47,6 +47,27 @@ class ScreenCaptureService: NSObject {
     func startCapture() async {
         guard !isRecording else { return }
         
+        // Check permission before starting
+        await MainActor.run { checkPermission() }
+        
+        if !hasPermission {
+            // Request permission if not granted
+            await MainActor.run { requestPermission() }
+            
+            // Wait a moment and re-check
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            await MainActor.run { checkPermission() }
+            
+            if !hasPermission {
+                WDLogger.error("Screen Recording permission denied. Cannot start capture.", category: .screenCapture)
+                // Open System Settings for user to grant permission
+                await MainActor.run {
+                    PermissionManager.shared.openSystemSettings()
+                }
+                return
+            }
+        }
+        
         do {
             let content = try await SCShareableContent.current
             let displays = content.displays

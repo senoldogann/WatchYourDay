@@ -13,6 +13,8 @@ import SwiftData
 struct WatchYourDayApp: App {
     private let windowManager = WindowManager.shared
     
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    
     init() {
         // Initialize Services on App Launch
         setupServices()
@@ -36,7 +38,7 @@ struct WatchYourDayApp: App {
     }
     
     private func setupServices() {
-        // Initialize Logger
+        // Initialize Logger (Safe to run always)
         _ = WDLogger.info("App Started (Stealth Mode)", category: .general)
         
         // Ensure Storage Directory Exists
@@ -44,24 +46,44 @@ struct WatchYourDayApp: App {
             await ImageStorageManager.shared.ensureDirectoryExists()
         }
         
-        // Start Retention Policy in Background Task since we have no Window.task
+        // Decide flow
+        if hasCompletedOnboarding {
+            startBackgroundServices()
+        } else {
+            // First Run: Open Onboarding Warning
+            // Must run on MainActor after app launch
+            Task { @MainActor in
+                // Small delay to ensure NSApp is ready
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
+                windowManager.openOnboarding {
+                    // On Finish:
+                    self.hasCompletedOnboarding = true
+                    self.startBackgroundServices()
+                    
+                    // Optional: Open Dashboard immediately after onboarding
+                    self.windowManager.openDashboard()
+                }
+            }
+        }
+    }
+    
+    private func startBackgroundServices() {
+        WDLogger.info("Starting Background Services...", category: .general)
+        
+        // Start Retention Policy
         Task {
-            // Give app a moment to launch
             try? await Task.sleep(nanoseconds: 2 * 1_000_000_000)
             await RetentionManager.shared.performCleanup()
         }
         
-        // Start Screen Capture if permission exists (or check it)
-        // Since we have no window on launch, we need to check if we should start recording.
-        // For now, ScreenCaptureService.shared.checkPermission() is called in WindowManager? No.
-        // We should trigger a check here.
-        Task { @MainActor in
-            ScreenCaptureService.shared.checkPermission()
+        // Auto-Start Screen Capture (if permission exists)
+        Task {
+            // Small delay to let system settle
+            try? await Task.sleep(nanoseconds: 1 * 1_000_000_000)
             
-            // Auto-start recording logic could go here later?
-            // For now, let's open dashboard if first run? No, Stealth mode implies silence.
-            // But if user has no idea app is running (since no dock), maybe show Dashboard on first launch?
-            // Let's rely on WindowManager logic if we want.
+            // Start recording automatically
+            await ScreenCaptureService.shared.startCapture()
+            WDLogger.info("Auto-started screen recording", category: .screenCapture)
         }
     }
 }
