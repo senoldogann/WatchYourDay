@@ -29,10 +29,13 @@ jobs:
             -destination 'platform=macOS,arch=arm64' \
             -configuration Release \
             -archivePath build/WatchYourDay.xcarchive \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=YES \
+            CODE_SIGNING_ALLOWED=YES \
             archive
+          
+          # Explicitly ad-hoc sign the app again to be safe
+          codesign --force --deep --sign - build/WatchYourDay.xcarchive/Products/Applications/WatchYourDay.app
           
           # 2. Export (Ad-Hoc / Copy) - extracting the .app directly
           # Since we don't have a certificiate in this environment yet, we validly assume
