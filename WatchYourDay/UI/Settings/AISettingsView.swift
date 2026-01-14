@@ -34,11 +34,28 @@ struct AISettingsView: View {
                     .foregroundStyle(Color.claudeSecondaryAccent)
             }
             
-            Picker("Provider", selection: $aiProvider) {
-                Text("Local (Ollama)").tag("Local (Ollama)")
-                Text("Cloud (OpenAI)").tag("Cloud (OpenAI)")
+            HStack(spacing: 0) {
+                ForEach(["Local (Ollama)", "Cloud (OpenAI)"], id: \.self) { provider in
+                    Button(action: { 
+                        withAnimation { aiProvider = provider }
+                    }) {
+                        Text(provider)
+                            .font(.subheadline.weight(.medium))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(aiProvider == provider ? Color.claudeAccent : Color.clear)
+                            .foregroundStyle(aiProvider == provider ? Color.white : Color.claudeTextPrimary)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            .pickerStyle(.segmented)
+            .background(Color.claudeSurface)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
             
             Group {
                 LabeledContent("Base URL") {
