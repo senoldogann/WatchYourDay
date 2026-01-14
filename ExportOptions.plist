@@ -6,11 +6,6 @@
     <string>developer-id</string>
     <key>signingStyle</key>
     <string>manual</string>
-    <key>provisioningProfiles</key>
-    <dict>
-        <key>com.senoldogan.WatchYourDay</key>
-        <string>Mac App Distribution</string>
-    </dict>
     <key>stripSwiftSymbols</key>
     <true/>
     <key>uploadSymbols</key>
