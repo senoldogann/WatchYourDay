@@ -11,6 +11,7 @@ enum LogCategory: String {
     case persistence = "Persistence"
     case security = "Security"
     case performance = "Performance"
+    case network = "Network"
 }
 
 struct WDLogger {

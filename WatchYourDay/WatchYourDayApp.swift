@@ -41,6 +41,11 @@ struct WatchYourDayApp: App {
         // Initialize Logger (Safe to run always)
         _ = WDLogger.info("App Started (Stealth Mode)", category: .general)
         
+        // Check for updates
+        Task {
+            await UpdateService.shared.checkForUpdates()
+        }
+        
         // Ensure Storage Directory Exists
         Task {
             await ImageStorageManager.shared.ensureDirectoryExists()

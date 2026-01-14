@@ -1,0 +1,52 @@
+name: Build and Release macOS App
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on version tags, e.g. v1.0.0
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Xcode version
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: 'latest-stable'
+
+      - name: Build and Archive
+        run: |
+          cd WatchYourDay
+          # 1. Archive
+          xcodebuild -scheme WatchYourDay \
+            -destination 'platform=macOS,arch=arm64' \
+            -configuration Release \
+            -archivePath ../build/WatchYourDay.xcarchive \
+            archive
+          
+          # 2. Export (Ad-Hoc / Copy) - extracting the .app directly
+          # Since we don't have a certificiate in this environment yet, we validly assume
+          # we just want the binary for now. Unsigned apps require "Open anyway" on macOS.
+          # For a "real" release, we would need to import certificates. 
+          # For this MVP, we will zip the .app found in the archive.
+          
+          cd ../build/WatchYourDay.xcarchive/Products/Applications
+          zip -r ../../../WatchYourDay.zip WatchYourDay.app
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: WatchYourDay.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
