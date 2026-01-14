@@ -16,47 +16,55 @@ actor RAGService {
     func query(_ userQuery: String, modelContext: ModelContext) async throws -> String {
         WDLogger.info("RAG: Processing query: \(userQuery)", category: .ai)
         
-        // 1. Embed the query
-        let queryEmbedding: [Float]
+        // 1. Get Statistical Summary (The "Big Picture")
+        // Always fetch this to prevent "tunnel vision" on just a few vector chunks
+        let statsContext = try await buildContextFromSnapshots(modelContext: modelContext)
+        
+        // 2. Embed the query & Search (The "Details")
+        var vectorContext = ""
         do {
-            // New Native Embedding Service
-            queryEmbedding = try await EmbeddingService.shared.embed(text: userQuery)
-        } catch {
-            WDLogger.error("RAG: Native Embedding failed - \(error.localizedDescription)", category: .ai)
-            return try await fallbackQuery(userQuery, modelContext: modelContext)
-        }
-        
-        // 2. Search for similar documents
-        let searchResults = try await VectorStore.shared.searchSimilar(
-            queryEmbedding: queryEmbedding,
-            limit: 5
-        )
-        
-        WDLogger.info("RAG: Found \(searchResults.count) relevant documents", category: .ai)
-        
-        // 3. Build context from results
-        var context = ""
-        if !searchResults.isEmpty {
-            context = "Here is relevant information from the user's activity history:\n\n"
-            for (index, result) in searchResults.enumerated() {
-                context += "\(index + 1). \(result.text)\n"
+            let queryEmbedding = try await EmbeddingService.shared.embed(text: userQuery)
+            let searchResults = try await VectorStore.shared.searchSimilar(
+                queryEmbedding: queryEmbedding,
+                limit: 10 // Increased from 5 to 10 for better coverage
+            )
+            
+            if !searchResults.isEmpty {
+                vectorContext = "\nDetailed Semantic Matches:\n"
+                for (index, result) in searchResults.enumerated() {
+                    vectorContext += "\(index + 1). \(result.text)\n"
+                }
             }
-            context += "\n"
-        } else {
-            // No embeddings - use snapshot data directly
-            context = try await buildContextFromSnapshots(modelContext: modelContext)
+        } catch {
+            WDLogger.error("RAG: Embedding/Search failed - \(error.localizedDescription)", category: .ai)
+            // Continue with just statsContext
         }
         
-        // 4. Generate response with context
-        let prompt = """
-        You are a helpful assistant that answers questions about the user's computer activity.
+        // 3. Combine Contexts
+        let finalContext = """
+        \(statsContext)
         
-        \(context)
+        \(vectorContext)
+        """
+        
+        // 4. Generate response
+        let prompt = """
+        You are a smart Personal Activity Analyst. 
+        Your goal is to explain what the user has been doing based on the provided data.
+        
+        DATA SOURCE 1: STATISTICS (Global Overview)
+        \(statsContext)
+        
+        DATA SOURCE 2: SEMANTIC SEARCH (Specific Details)
+        \(vectorContext)
         
         User Question: \(userQuery)
         
-        Please provide a helpful, concise answer based on the activity data above.
-        If you don't have enough information, say so politely.
+        INSTRUCTIONS:
+        - Use the STATISTICS to give a high-level summary (e.g. "You spent 2 hours coding...").
+        - Use the SEMANTIC SEARCH to add specific details (e.g. "...specifically working on RAGService.swift").
+        - If the user asks for "all activities", rely heavily on the STATISTICS.
+        - Be concise, professional, and helpful.
         """
         
         // 5. Call LLM
@@ -85,43 +93,25 @@ actor RAGService {
     
     // MARK: - Build Context from Snapshots
     private func buildContextFromSnapshots(modelContext: ModelContext) async throws -> String {
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: Date())
-        let predicate = #Predicate<Snapshot> { $0.timestamp >= startOfDay }
-        let descriptor = FetchDescriptor<Snapshot>(predicate: predicate)
+        // Use StatsService for accurate duration calculation
+        // This ensures the numbers match what the user sees in the Dashboard
+        let today = Date()
         
-        let snapshots = try modelContext.fetch(descriptor)
-        
-        guard !snapshots.isEmpty else {
-            return "No activity data recorded today."
+        guard let stats = await StatsService.shared.calculateReportingData(for: today) else {
+             return "No activity data recorded today."
         }
         
-        // Aggregate by app
-        var appCounts: [String: Int] = [:]
-        var windowTitles: [String: Set<String>] = [:]
+        var context = "Today's Activity Summary (\(today.formatted(date: .abbreviated, time: .omitted))):\n"
+        context += "Total Time Recorded: \(stats.totalMinutes) minutes\n"
+        context += String(format: "Focus Score: %.1f%%\n\n", stats.focusScore)
         
-        for s in snapshots {
-            appCounts[s.appName, default: 0] += 1
-            if !s.windowTitle.isEmpty {
-                windowTitles[s.appName, default: []].insert(s.windowTitle)
-            }
+        context += "Top Applications (by duration):\n"
+        for (app, minutes) in stats.categoryCounts.sorted(by: { $0.value > $1.value }).prefix(10) {
+             context += "- \(app): \(minutes) minutes\n"
         }
         
-        // Build context
-        var context = "Today's Activity Summary:\n"
-        context += "Total snapshots: \(snapshots.count)\n\n"
-        
-        context += "Applications used (sorted by time):\n"
-        for (app, count) in appCounts.sorted(by: { $0.value > $1.value }).prefix(10) {
-            let minutes = count // Each snapshot ≈ 1 minute
-            context += "- \(app): \(minutes) minutes\n"
-            
-            if let titles = windowTitles[app]?.prefix(3) {
-                for title in titles {
-                    context += "  • \(title)\n"
-                }
-            }
-        }
+        // Also add top 5 apps list specifically for clarity
+        context += "\nMost Used Apps: " + stats.topApps.joined(separator: ", ") + "\n"
         
         return context
     }

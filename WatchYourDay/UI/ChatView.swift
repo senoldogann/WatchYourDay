@@ -10,10 +10,8 @@ import SwiftData
 
 struct ChatView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var messages: [ChatMessage] = []
+    @ObservedObject private var chatManager = ChatManager.shared
     @State private var inputText: String = ""
-    @State private var isLoading = false
-    @State private var embeddingCount: Int = 0
     
     var body: some View {
         VStack(spacing: 0) {
@@ -26,19 +24,19 @@ struct ChatView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
-                        ForEach(messages) { message in
+                        ForEach(chatManager.messages) { message in
                             ModernMessageBubble(message: message)
                                 .id(message.id)
                         }
                         
-                        if isLoading {
+                        if chatManager.isLoading {
                             LoadingBubble()
                         }
                     }
                     .padding()
                 }
-                .onChange(of: messages.count) { _, _ in
-                    if let lastMessage = messages.last {
+                .onChange(of: chatManager.messages.count) { _, _ in
+                    if let lastMessage = chatManager.messages.last {
                         withAnimation {
                             proxy.scrollTo(lastMessage.id, anchor: .bottom)
                         }
@@ -53,8 +51,7 @@ struct ChatView: View {
         }
         .background(Color.claudeBackground)
         .onAppear {
-            Task { await loadEmbeddingCount() }
-            addWelcomeMessage()
+            Task { await chatManager.loadEmbeddingCount() }
         }
     }
     
@@ -70,14 +67,14 @@ struct ChatView: View {
                     .font(.headline)
                     .foregroundStyle(Color.claudeTextPrimary)
                 
-                Text("\(embeddingCount) memories indexed")
+                Text("\(chatManager.embeddingCount) memories indexed")
                     .font(.caption)
                     .foregroundStyle(Color.gray)
             }
             
             Spacer()
             
-            Button(action: clearChat) {
+            Button(action: chatManager.clearChat) {
                 Image(systemName: "trash")
                     .foregroundStyle(Color.gray)
             }
@@ -98,75 +95,20 @@ struct ChatView: View {
             
             Button(action: sendMessage) {
                 Image(systemName: "arrow.up.circle.fill")
-                    .font(.title)
-                    .foregroundStyle(inputText.isEmpty ? Color.gray : Color.claudeAccent)
+                .font(.title)
+                .foregroundStyle(inputText.isEmpty ? Color.gray : Color.claudeAccent)
             }
             .buttonStyle(.plain)
-            .disabled(inputText.isEmpty || isLoading)
+            .disabled(inputText.isEmpty || chatManager.isLoading)
         }
         .padding()
     }
     
     // MARK: - Actions
     private func sendMessage() {
-        guard !inputText.isEmpty else { return }
-        
-        let userMessage = ChatMessage(role: .user, content: inputText)
-        messages.append(userMessage)
-        
-        let query = inputText
+        chatManager.sendMessage(inputText, modelContext: modelContext)
         inputText = ""
-        isLoading = true
-        
-        Task {
-            do {
-                let response = try await RAGService.shared.query(query, modelContext: modelContext)
-                // Note: True streaming would be better, but simulated typewriter is okay for now.
-                let assistantMessage = ChatMessage(role: .assistant, content: response)
-                
-                await MainActor.run {
-                    messages.append(assistantMessage)
-                    isLoading = false
-                }
-            } catch {
-                let errorMessage = ChatMessage(role: .assistant, content: "Error: \(error.localizedDescription)")
-                await MainActor.run {
-                    messages.append(errorMessage)
-                    isLoading = false
-                }
-            }
-        }
     }
-    
-    private func clearChat() {
-        messages.removeAll()
-        addWelcomeMessage()
-    }
-    
-    private func addWelcomeMessage() {
-        let welcome = ChatMessage(
-            role: .assistant,
-            content: "👋 Hi! I can help you understand your activity history. Try asking:\n\n• \"What did I work on today?\"\n• \"How much time did I spend in Xcode?\"\n• \"What was I doing this morning?\""
-        )
-        messages.append(welcome)
-    }
-    
-    private func loadEmbeddingCount() async {
-        embeddingCount = await VectorStore.shared.getEmbeddingCount()
-    }
-}
-
-// MARK: - Message Model
-struct ChatMessage: Identifiable {
-    let id = UUID()
-    let role: MessageRole
-    let content: String
-    let timestamp = Date()
-}
-
-enum MessageRole {
-    case user
-    case assistant
 }
 
 // MARK: - Message Bubble
