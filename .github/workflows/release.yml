@@ -3,14 +3,14 @@ name: Build and Release macOS App
 on:
   push:
     tags:
-      - 'v*' # Trigger on version tags, e.g. v1.0.0
+      - 'v*'
 
 permissions:
   contents: write
 
 jobs:
   build:
-    name: Build and Release
+    name: Build, Sign, Notarize, and Release
     runs-on: macos-latest
     
     steps:
@@ -22,34 +22,84 @@ jobs:
         with:
           xcode-version: 'latest-stable'
 
-      - name: Build and Archive
+      - name: Install Apple Certificate
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
-          # 1. Archive
+          # Create the keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -t 3600 -l ~/Library/Keychains/build.keychain
+
+          # Import certificate to keychain
+          echo $BUILD_CERTIFICATE_BASE64 | base64 --decode > certificate.p12
+          security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          
+      - name: Build and Archive
+        env:
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: |
           xcodebuild -scheme WatchYourDay \
             -destination 'platform=macOS,arch=arm64' \
             -configuration Release \
             -archivePath build/WatchYourDay.xcarchive \
-            CODE_SIGN_IDENTITY="-" \
-            CODE_SIGNING_REQUIRED=YES \
-            CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGN_STYLE="Manual" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
             archive
+
+      - name: Export Archive (Signed)
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath build/WatchYourDay.xcarchive \
+            -exportOptionsPlist WatchYourDay/ExportOptions.plist \
+            -exportPath build/Export
+
+      - name: Rename App
+        run: |
+          # Move app to a clean folder for zipping later
+          mkdir -p build/Artifacts
+          mv "build/Export/WatchYourDay.app" "build/Artifacts/WatchYourDay.app"
+
+      - name: Notarize App
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          NOTARY_TOOL_PASSWORD: ${{ secrets.NOTARY_TOOL_PASSWORD }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: |
+          # Create a zip for notarization (xcrun notarytool requires a zip or dmg)
+          /usr/bin/ditto -c -k --keepParent "build/Artifacts/WatchYourDay.app" "build/Artifacts/WatchYourDay-Notarize.zip"
           
-          # Explicitly ad-hoc sign the app again to be safe
-          codesign --force --deep --sign - build/WatchYourDay.xcarchive/Products/Applications/WatchYourDay.app
-          
-          # 2. Export (Ad-Hoc / Copy) - extracting the .app directly
-          # Since we don't have a certificiate in this environment yet, we validly assume
-          # we just want the binary for now. Unsigned apps require "Open anyway" on macOS.
-          # For a "real" release, we would need to import certificates. 
-          # For this MVP, we will zip the .app found in the archive.
-          
-          cd build/WatchYourDay.xcarchive/Products/Applications
-          zip -r ../../../../WatchYourDay.zip WatchYourDay.app
+          echo "Submitting for Notarization..."
+          xcrun notarytool submit "build/Artifacts/WatchYourDay-Notarize.zip" \
+            --apple-id "$APPLE_ID" \
+            --password "$NOTARY_TOOL_PASSWORD" \
+            --team-id "$TEAM_ID" \
+            --wait
+
+      - name: Staple Ticket
+        run: |
+          echo "Stapling ticket to App..."
+          xcrun stapler staple "build/Artifacts/WatchYourDay.app"
+
+      - name: Verify Signature (Optional)
+        run: |
+          spctl --assess --verbose "build/Artifacts/WatchYourDay.app" || true
+
+      - name: Zip for Release
+        run: |
+          cd build/Artifacts
+          zip -r WatchYourDay.zip WatchYourDay.app
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: WatchYourDay.zip
+          files: build/Artifacts/WatchYourDay.zip
           generate_release_notes: true
           draft: false
           prerelease: false
