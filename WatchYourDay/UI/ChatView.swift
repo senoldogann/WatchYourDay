@@ -27,7 +27,7 @@ struct ChatView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
                         ForEach(messages) { message in
-                            MessageBubble(message: message)
+                            ModernMessageBubble(message: message)
                                 .id(message.id)
                         }
                         
@@ -121,6 +121,7 @@ struct ChatView: View {
         Task {
             do {
                 let response = try await RAGService.shared.query(query, modelContext: modelContext)
+                // Note: True streaming would be better, but simulated typewriter is okay for now.
                 let assistantMessage = ChatMessage(role: .assistant, content: response)
                 
                 await MainActor.run {
@@ -169,29 +170,7 @@ enum MessageRole {
 }
 
 // MARK: - Message Bubble
-struct MessageBubble: View {
-    let message: ChatMessage
-    
-    var body: some View {
-        HStack {
-            if message.role == .user { Spacer(minLength: 60) }
-            
-            VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
-                Text(message.content)
-                    .padding(12)
-                    .background(message.role == .user ? Color.claudeAccent : Color.claudeSurface)
-                    .foregroundStyle(message.role == .user ? .white : Color.claudeTextPrimary)
-                    .cornerRadius(16)
-                
-                Text(message.timestamp, style: .time)
-                    .font(.caption2)
-                    .foregroundStyle(Color.gray)
-            }
-            
-            if message.role == .assistant { Spacer(minLength: 60) }
-        }
-    }
-}
+// MARK: - Legacy Bubble Removed (See ChatComponents.swift)
 
 // MARK: - Loading Bubble
 struct LoadingBubble: View {
