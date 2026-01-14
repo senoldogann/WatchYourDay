@@ -24,12 +24,11 @@ jobs:
 
       - name: Build and Archive
         run: |
-          cd WatchYourDay
           # 1. Archive
           xcodebuild -scheme WatchYourDay \
             -destination 'platform=macOS,arch=arm64' \
             -configuration Release \
-            -archivePath ../build/WatchYourDay.xcarchive \
+            -archivePath build/WatchYourDay.xcarchive \
             archive
           
           # 2. Export (Ad-Hoc / Copy) - extracting the .app directly
@@ -38,8 +37,8 @@ jobs:
           # For a "real" release, we would need to import certificates. 
           # For this MVP, we will zip the .app found in the archive.
           
-          cd ../build/WatchYourDay.xcarchive/Products/Applications
-          zip -r ../../../WatchYourDay.zip WatchYourDay.app
+          cd build/WatchYourDay.xcarchive/Products/Applications
+          zip -r ../../../../WatchYourDay.zip WatchYourDay.app
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
