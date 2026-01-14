@@ -19,10 +19,10 @@ actor RAGService {
         // 1. Embed the query
         let queryEmbedding: [Float]
         do {
+            // New Native Embedding Service
             queryEmbedding = try await EmbeddingService.shared.embed(text: userQuery)
         } catch {
-            WDLogger.error("RAG: Failed to embed query - \(error.localizedDescription)", category: .ai)
-            // Fallback: Use regular AI without RAG
+            WDLogger.error("RAG: Native Embedding failed - \(error.localizedDescription)", category: .ai)
             return try await fallbackQuery(userQuery, modelContext: modelContext)
         }
         
