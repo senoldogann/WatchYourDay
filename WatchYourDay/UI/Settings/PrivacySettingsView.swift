@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PrivacySettingsView: View {
+    @ObservedObject var theme = ThemeManager.shared
     @ObservedObject var blacklistManager = BlacklistManager.shared
     @State private var newBlacklistApp: String = ""
     

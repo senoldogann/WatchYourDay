@@ -2,6 +2,8 @@ import SwiftUI
 import SwiftData
 
 struct StorageSettingsView: View {
+    @ObservedObject var theme = ThemeManager.shared
+    @Query var snapshots: [Snapshot]
     @State private var showingClearConfirmation = false
     
     var body: some View {
@@ -19,7 +21,7 @@ struct StorageSettingsView: View {
                     Text("Total Snapshots")
                         .font(.caption)
                         .foregroundStyle(Color.gray)
-                    Text("Calculated dynamically") // Placeholder
+                    Text("\(snapshots.count) snapshots")
                         .font(.headline)
                         .foregroundStyle(Color.claudeTextPrimary)
                 }

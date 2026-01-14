@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct SettingsView: View {
+    @ObservedObject var theme = ThemeManager.shared
     // Theme Manager might be used for global theme settings if we add them here, 
     // but sub-views handle their own styling mostly.
     

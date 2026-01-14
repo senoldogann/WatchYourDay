@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AISettingsView: View {
+    @ObservedObject var theme = ThemeManager.shared
     @AppStorage("aiProvider") private var aiProvider = "Local (Ollama)"
     @AppStorage("localModelName") private var localModelName = "llama3"
     @AppStorage("cloudModelName") private var cloudModelName = "gpt-4o-mini"
@@ -96,8 +97,14 @@ struct AISettingsView: View {
                     Text("Test Connection")
                 }
                 .frame(maxWidth: .infinity)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(Color.claudeAccent)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.plain)
             .disabled(isTestingConnection)
             
             if showingTestResult {

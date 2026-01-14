@@ -20,7 +20,7 @@ class BlacklistManager: ObservableObject {
     func isBlacklisted(appName: String) -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        return blockedApps.contains { $0.localizedCaseInsensitiveCompare(appName) == .orderedSame }
+        return blockedApps.contains { appName.localizedCaseInsensitiveContains($0) }
     }
     
     /// Adds an app to the blacklist -> Thread Safe
