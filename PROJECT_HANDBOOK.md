@@ -36,15 +36,17 @@ It uses native macOS frameworks like `ScreenCaptureKit` for high-performance rec
 - **Privacy Guard:** A dedicated `PrivacyGuard` service scans all captured text and prompts for sensitive patterns (Credit Cards, Emails, API Keys).
 - **Auto-Redaction:** If configured, the system scrubs PII before it ever reaches the embedding layeer.
 
-### 🧠 Search & History (Native RAG)
-- **Natural Language Search:** Find captured moments using semantic meaning, not just keywords.
-- **On-Device Embeddings:** Uses Apple's `NaturalLanguage` (`NLEmbedding`) to vectorize text instantly without external API calls.
-- **OCR Search:** Apple Vision framework extracts text from screenshots with high accuracy.
+### 📊 Hybrid Intelligence (RAG + Analytics)
+- **Hybrid Retrieval:** combines semantic vector search with statistical summaries from `StatsService` for broader context.
+- **Natural Language Search:** Find captured moments using semantic meaning.
+- **On-Device Embeddings:** Uses Apple's `NaturalLanguage` to vectorize text instantly.
+- **OCR Search:** Apple Vision framework extracts text from screenshots.
 
 ### 🤖 Local AI & Chat
 - **Ollama Integration:** Connects to a local `llama3.2` model to answer questions about your day ("What was I working on at 10 AM?").
 - **Zero-Config Setup:** The app detects missing AI models and installs/runs them for you automatically.
-- **Modern Chat UI:** A fluid, distraction-free chat interface with markdown support.
+- **Chat Persistence:** History is preserved via `ChatManager` across navigation and sessions.
+- **Modern Chat UI:** A fluid, distraction-free chat interface with full Markdown formatting.
 
 ### 🔄 Auto-Update
 - **Seamless Upgrades:** The app checks GitHub Releases for new versions and prompts you to upgrade, ensuring you always have the latest security patches.

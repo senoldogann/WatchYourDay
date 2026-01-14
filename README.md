@@ -27,7 +27,14 @@ Don't just remember *that* you saw something; find it.
 Integrates with **Ollama** locally to provide daily summaries and chat.
 - **One-Click Setup:** No terminal needed. The built-in wizard handles downloading and configuring the AI engine for you.
 - **Interactive Chat:** Chat with your history using a modern, fluid interface.
+- **Interactive Chat:** Chat with your history using a modern, fluid interface.
+- **Persistent History:** Your chat context is preserved even when you switch views or restart the app.
 
+### 📊 Hybrid Intelligence (RAG + Analytics)
+Combines vector search with statistical analysis for accurate answers.
+- **Big Picture:** Understands "all activities" using `StatsService` (e.g., "Total time in Xcode").
+- **Deep Dive:** Uses vector embeddings to find specific moments (e.g., "When did I edit the login screen?").
+- **Rich Formatting:** Answers are presented with proper Markdown styling (Bold, Headers, Lists).
 ### 🔄 Auto-Update
 Always stay on the latest version with built-in update checks and GitHub Actions powered releases.
 
