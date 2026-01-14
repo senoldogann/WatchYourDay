@@ -57,7 +57,7 @@ jobs:
         run: |
           xcodebuild -exportArchive \
             -archivePath build/WatchYourDay.xcarchive \
-            -exportOptionsPlist WatchYourDay/ExportOptions.plist \
+            -exportOptionsPlist ExportOptions.plist \
             -exportPath build/Export
 
       - name: Rename App
