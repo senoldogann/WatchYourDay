@@ -33,3 +33,8 @@ DerivedData/
 # CocoaPods
 Pods/
 build.log
+build_output.txt
+
+# Release
+ExportOptions.plist
+*.zip
