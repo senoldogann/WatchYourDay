@@ -8,29 +8,25 @@ actor EmbeddingService {
     private var embeddingModel: NLEmbedding?
     
     private init() {
-        // Initialize the model for English.
-        // Note: NLEmbedding supports multiple languages, but .english is the most robust for general purpose.
-        // Ideally, we could check NLEmbedding.embedding(for: .turkish) if supported or fallback.
-        // Currently .english vector space is often used for multilingual if the model supports it, 
-        // but explicit language support is better.
-        
-        // Try getting embedding for the current system language, fallback to English.
-        if let lang = Locale.current.language.languageCode?.identifier,
-           let model = NLEmbedding.wordEmbedding(for: NLLanguage(lang)) {
-             self.embeddingModel = model
-        } else {
-             self.embeddingModel = NLEmbedding.wordEmbedding(for: .english)
-        }
+        // Initialize the model for English Sentence Embeddings (Best for RAG)
+        self.embeddingModel = NLEmbedding.sentenceEmbedding(for: .english)
     }
     
     /// Generates a vector embedding for the given text.
-    /// Uses sentence embedding if available (better for context), otherwise falls back to word embedding aggregation.
     func embed(text: String) async throws -> [Float] {
-        guard let model = NLEmbedding.sentenceEmbedding(for: .english) else {
+        guard let model = self.embeddingModel else {
+            // Attempt valid fallback if init failed (unlikely for built-in)
+            if let fallback = NLEmbedding.sentenceEmbedding(for: .english) {
+                print("EmbeddingService: Using fallback model")
+                 // We don't save to self.embeddingModel because we are in an actor (immutable state safety check might be needed if var is not isolated properly, but actor var is safe. However, simpler to just use local if self is nil)
+                 guard let vector = fallback.vector(for: text) else {
+                     throw EmbeddingError.vectorGenerationFailed
+                 }
+                 return vector.map { Float($0) }
+            }
             throw EmbeddingError.modelUnavailable
         }
         
-        // NLEmbedding returns [Double], we typically use [Float] for storage/performance
         guard let vector = model.vector(for: text) else {
             throw EmbeddingError.vectorGenerationFailed
         }

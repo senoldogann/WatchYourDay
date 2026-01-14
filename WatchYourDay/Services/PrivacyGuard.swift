@@ -20,29 +20,33 @@ struct PrivacyGuard {
         #"[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,64}"# // Email
     ]
     
-    private init() {}
+    // Cached Regex Objects
+    private let compiledRegexes: [NSRegularExpression]
+    
+    private init() {
+        self.compiledRegexes = sensitivePatterns.compactMap { pattern in
+            try? NSRegularExpression(pattern: pattern, options: [])
+        }
+    }
     
     /// Scrubs sensitive information from a text string.
     /// - Parameter text: The raw text that might contain PII.
     /// - Returns: Sanitized text with PII replaced by [REDACTED].
     func scrub(_ text: String) -> String {
         var scrubbedText = text
-        for pattern in sensitivePatterns {
-            do {
-                let regex = try NSRegularExpression(pattern: pattern)
-                let range = NSRange(location: 0, length: scrubbedText.utf16.count)
-                scrubbedText = regex.stringByReplacingMatches(in: scrubbedText, options: [], range: range, withTemplate: "[REDACTED]")
-            } catch {
-                WDLogger.error("PrivacyGuard Regex Error: \(error)", category: .general)
-            }
+        let range = NSRange(location: 0, length: scrubbedText.utf16.count)
+        
+        for regex in compiledRegexes {
+            scrubbedText = regex.stringByReplacingMatches(in: scrubbedText, options: [], range: range, withTemplate: "[REDACTED]")
         }
         return scrubbedText
     }
     
     /// Checks if the text contains any probable PII.
     func containsPII(_ text: String) -> Bool {
-        for pattern in sensitivePatterns {
-            if text.range(of: pattern, options: .regularExpression) != nil {
+        let range = NSRange(location: 0, length: text.utf16.count)
+        for regex in compiledRegexes {
+            if regex.firstMatch(in: text, options: [], range: range) != nil {
                 return true
             }
         }
