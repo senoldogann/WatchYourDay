@@ -1,4 +1,4 @@
-# WatchYourDay: Automated Activity Tracker
+# WatchYourDay: Automated Activity Tracker Feature Handbook
 **Native macOS Activity Tracking & Intelligence System**
 
 > *Privacy-First. Local-First. Automated.*
@@ -23,42 +23,50 @@ It uses native macOS frameworks like `ScreenCaptureKit` for high-performance rec
 ## 2. Core Concepts
 1.  **Unobtrusive:** The app runs as a Menu Bar agent (`LSUIElement`). It has no Dock icon and doesn't clutter your workspace.
 2.  **Intelligent:** It doesn't just save screenshots; it reads the text inside them to understand context (e.g., distinguishing between different project files).
-3.  **Local Sovereignty:** No data is ever sent to the cloud. All processing happens on `localhost`.
+3.  **Local Sovereignty:** No data is ever sent to the cloud. All processing happens on `localhost` or via on-device CoreML.
 
 ## 3. Features
 
 ### 🕵️ Stealth Agent
-- **Background Execution:** Runs silently in the background.
+- **Background Execution:** Runs silently in the background (1 FPS capture).
 - **Launch at Login:** Configurable auto-start via system settings.
 
 ### 🛡️ Privacy Controls
 - **Blacklist:** You can exclude specific apps (like Password Managers or Banking apps) from ever being recorded.
-- **Auto-Redaction:** Detects potential PII on screen and attempts to blur it before saving.
+- **Privacy Guard:** A dedicated `PrivacyGuard` service scans all captured text and prompts for sensitive patterns (Credit Cards, Emails, API Keys).
+- **Auto-Redaction:** If configured, the system scrubs PII before it ever reaches the embedding layeer.
 
-### 🧠 Search & History
-- **OCR Search:** Search for text that appeared on your screen. Useful for finding "that one document" you saw earlier.
-- **Timeline:** Visual history of your day.
+### 🧠 Search & History (Native RAG)
+- **Natural Language Search:** Find captured moments using semantic meaning, not just keywords.
+- **On-Device Embeddings:** Uses Apple's `NaturalLanguage` (`NLEmbedding`) to vectorize text instantly without external API calls.
+- **OCR Search:** Apple Vision framework extracts text from screenshots with high accuracy.
 
-### 🤖 Local AI Summary
-- **Ollama Support:** Connects to a local running instance of Ollama to generate text summaries of your day (e.g., "Spent 3 hours on iOS Development").
+### 🤖 Local AI & Chat
+- **Ollama Integration:** Connects to a local `llama3.2` model to answer questions about your day ("What was I working on at 10 AM?").
+- **Zero-Config Setup:** The app detects missing AI models and installs/runs them for you automatically.
+- **Modern Chat UI:** A fluid, distraction-free chat interface with markdown support.
+
+### 🔄 Auto-Update
+- **Seamless Upgrades:** The app checks GitHub Releases for new versions and prompts you to upgrade, ensuring you always have the latest security patches.
 
 ## 4. User Guide
 
-### Getting Started
+### Getting Started (Zero Config)
 1.  **Launch:** Open the app. It will appear in your Menu Bar (Eye icon).
-2.  **Dashboard:** Click the icon -> "Open Dashboard".
-3.  **Permissions:** You must grant "Screen Recording" permission in System Settings for the app to function.
+2.  **Onboarding:** The new "AI Setup Wizard" will guide you through setting up the local brain.
+3.  **Permissions:** You must grant "Screen Recording" permission in System Settings.
 
 ### Dashboard Usage
 - **Timeline Tab:** Scroll through captured snapshots.
-- **Stats Tab:** View time distribution across apps and generic AI insights.
-- **Search Tab:** Find specific text in your history.
-- **Settings:** Manage blacklist and data retention (auto-delete after 30 days).
+- **Chat Tab:** Ask the AI questions about your history.
+- **Stats Tab:** View time distribution across apps.
+- **Search Tab:** Find specific text.
+- **Settings:** Manage blacklist, updates, and data retention.
 
 ## 5. Privacy & Security
 This project was built with a strict "Local Only" policy.
-- **No Analytics:** We do not track how you use the app.
-- **No Cloud Uploads:** Your images and database (`SwiftData`) live in your local Application Support folder.
+- **No Analytics:** We do not track usage.
+- **No Cloud Uploads:** Your images and database (`SwiftData`) live in `~/Library/Application Support`.
 - **Direct AI Connection:** AI requests go directly to `http://localhost:11434`.
 
 ## 6. Architecture
@@ -67,13 +75,19 @@ This project was built with a strict "Local Only" policy.
 - **Languages:** Swift 6.0
 - **UI:** SwiftUI (Dashboard) + AppKit (Window Management)
 - **Database:** SwiftData (SQLite)
-- **AI Integration:** REST API to Ollama
+- **Embedding:** `NaturalLanguage` (Apple Native)
+- **OCR:** `Vision` Framework
+- **AI Inference:** `OllamaManager` -> `Ollama` (Localhost)
 
 ### Pipeline
 1.  **Capture:** `ScreenCaptureKit` grabs a frame.
-2.  **Filter:** Checks if the frontmost app is in the Blacklist.
-3.  **Process:** Extracts text (OCR) and blurs sensitive regions (Vision).
-4.  **Store:** Saves compressed image and metadata.
+2.  **Privacy Check:** `BlacklistManager` verifies the app is safe.
+3.  **Processing:**
+    - `OCRService` extracts text.
+    - `PrivacyGuard` scrubs PII.
+    - `EmbeddingService` generates a vector (512-dim).
+4.  **Store:** Saves compressed image + Vector + Metadata to SwiftData.
+5.  **Retrieval (RAG):** When you chat, `RAGService` searches SwiftData vectors using Cosine Similarity and feeds relevant context to Ollama.
 
 ---
 
