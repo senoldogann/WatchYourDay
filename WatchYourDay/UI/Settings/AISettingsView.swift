@@ -97,14 +97,13 @@ struct AISettingsView: View {
                     Text("Test Connection")
                 }
                 .frame(maxWidth: .infinity)
-                }
-                .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
                 .background(Color.claudeAccent)
                 .foregroundStyle(.white)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
-                .buttonStyle(.plain)
-                .disabled(isTestingConnection)
+            }
+            .buttonStyle(.plain)
+            .disabled(isTestingConnection)
             
             if showingTestResult {
                 Text(testResultMessage)
