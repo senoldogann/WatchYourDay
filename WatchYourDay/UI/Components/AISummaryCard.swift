@@ -56,7 +56,7 @@ struct AISummaryCard: View {
                     .foregroundStyle(Color.gray)
                     .italic()
             } else {
-                Text(summary)
+                Text(.init(summary)) // .init triggers LocalizedStringKey for Markdown parsing
                     .font(.callout)
                     .foregroundStyle(Color.claudeTextPrimary)
                     .lineSpacing(4)
