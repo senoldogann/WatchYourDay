@@ -93,11 +93,11 @@ actor RAGService {
     
     // MARK: - Build Context from Snapshots
     private func buildContextFromSnapshots(modelContext: ModelContext) async throws -> String {
-        // Use StatsService for accurate duration calculation
-        // This ensures the numbers match what the user sees in the Dashboard
+        // Create a StatsService instance with the given ModelContext
+        let statsService = StatsService(modelContainer: modelContext.container)
         let today = Date()
         
-        guard let stats = await StatsService.shared.calculateReportingData(for: today) else {
+        guard let stats = await statsService.calculateReportingData(for: today) else {
              return "No activity data recorded today."
         }
         

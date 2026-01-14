@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import SwiftData
+import Combine
 
 @MainActor
 class ChatManager: ObservableObject {
