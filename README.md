@@ -61,6 +61,16 @@ For detailed usage and architecture, please see the **[Project Handbook](PROJECT
 3.  Launch the app.
 4.  Follow the **AI Setup Wizard** to initialize your local brain.
 
+### ⚠️ Installation Troubleshooting
+Since this is an open-source app not signed by a $99/year Apple Developer ID, you may see a warning:
+> *"WatchYourDay" cannot be opened because it is from an unidentified developer.*
+
+**Fix:**
+1.  **Right-Click** (or Control-Click) the app icon.
+2.  Select **Open**.
+3.  Click **Open** in the dialog box.
+*(You only need to do this once)*
+
 ---
 
 *Developed by Şenol Doğan*
