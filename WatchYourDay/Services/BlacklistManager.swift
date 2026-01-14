@@ -55,26 +55,9 @@ class BlacklistManager: ObservableObject {
     }
     
     private func save() {
-        // Note: encoding is fast, but we should probably do it under lock if we called from outside.
-        // Since safe() is called by addApp/removeApp which HAVE locks, we are good.
-        // However, if we access blockedApps here, it is safe because we are recursive? 
-        // No, NSLock is NOT recursive by default. Using standard NSLock inside already locked scope = DEADLOCK.
-        // We must ensure save() does NOT lock, but expects to be called from locked scope.
-        // OR we use the array copy passed to save? 
-        
-        // Let's rely on the fact that save() uses the property.
-        // Wait, JSONEncoder accesses `self.blockedApps`.
-        // If we represent `save()` as a private helper, it should assume the caller holds the lock.
-        
-        // ISSUE: @AppStorage access can trigger UI updates.
-        // We should move `blockedAppsJson` update to MainActor if possible? 
-        // Or simply do it here. @AppStorage itself is somewhat thread safe for UserDefaults wrapper, 
-        // but triggering @Published update from background thread is BAD for SwiftUI.
-        
         if let data = try? JSONEncoder().encode(blockedApps),
            let json = String(data: data, encoding: .utf8) {
             
-            // Critical: Update @AppStorage and @Published on Main Thread to avoid UI glitches
             DispatchQueue.main.async { [weak self] in
                 self?.blockedAppsJson = json
             }

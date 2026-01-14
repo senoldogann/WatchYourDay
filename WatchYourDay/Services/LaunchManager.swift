@@ -30,7 +30,7 @@ class LaunchManager: ObservableObject {
                 self.isEnabled = enabled
             }
         } catch {
-            print("Failed to toggle Launch at Login: \(error)")
+            WDLogger.error("Failed to toggle Launch at Login: \(error)", category: .general)
             DispatchQueue.main.async {
                 self.isEnabled = SMAppService.mainApp.status == .enabled
             }

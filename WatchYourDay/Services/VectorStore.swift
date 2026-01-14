@@ -15,6 +15,8 @@ actor VectorStore {
     private var db: OpaquePointer?
     private let dbPath: String
     
+    private var initTask: Task<Void, Never>?
+    
     private init() {
         // Store in Application Support
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
@@ -25,9 +27,14 @@ actor VectorStore {
         
         self.dbPath = appFolder.appendingPathComponent("embeddings.sqlite").path
         
-        Task {
+        self.initTask = Task {
             await initializeDatabase()
         }
+    }
+    
+    /// Waits for database initialization to complete
+    private func ensureReady() async {
+        _ = await initTask?.result
     }
     
     // MARK: - Database Setup
@@ -61,6 +68,7 @@ actor VectorStore {
     
     // MARK: - Insert Embedding
     func insertEmbedding(snapshotId: String, text: String, embedding: [Float]) async throws {
+        await ensureReady()
         guard let db = db else { throw VectorStoreError.databaseNotOpen }
         
         let sql = "INSERT OR REPLACE INTO embeddings (snapshot_id, text, embedding) VALUES (?, ?, ?)"
@@ -91,8 +99,11 @@ actor VectorStore {
     
     // MARK: - Search Similar
     func searchSimilar(queryEmbedding: [Float], limit: Int = 5) async throws -> [SearchResult] {
+        await ensureReady()
         guard let db = db else { throw VectorStoreError.databaseNotOpen }
         
+        // Performance Note: Currently using basic SQL fetch with LIMIT to avoid O(N) scan.
+        // For production scaling (>10k vectors) with high recall, consider integrating `sqlite-vec` or a dedicated vector DB.
         let sql = "SELECT snapshot_id, text, embedding FROM embeddings ORDER BY timestamp DESC LIMIT 1000"
         var statement: OpaquePointer?
         
@@ -154,6 +165,7 @@ actor VectorStore {
     
     // MARK: - Stats
     func getEmbeddingCount() async -> Int {
+        await ensureReady()
         guard let db = db else { return 0 }
         
         let sql = "SELECT COUNT(*) FROM embeddings"

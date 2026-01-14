@@ -172,12 +172,12 @@ actor StatsService {
         do {
             return try modelContext.fetch(descriptor)
         } catch {
-            print("StatsService Fetch Error: \(error)")
+            WDLogger.error("StatsService Fetch Error: \(error)", category: .general)
             return []
         }
     }
 
-    // MARK: - Helpers (TODO: Move to a Configuration Service)
+    // MARK: - Helpers
     private func isProductiveApp(_ appName: String) -> Bool {
         let productiveApps = ["Xcode", "VS Code", "Terminal", "Cursor", "Slack", "Figma", "Sketch", "Notion", "Obsidian"]
         return productiveApps.contains(where: { appName.localizedCaseInsensitiveContains($0) })

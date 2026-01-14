@@ -280,6 +280,11 @@ class StreamContext: NSObject, SCStreamOutput {
                         displayID: self.displayID
                     )
                     context.insert(snapshot)
+                    
+                    // RAG: Index for semantic search
+                    Task {
+                        await RAGService.shared.indexSnapshot(snapshot)
+                    }
                 }
             } catch {
                 WDLogger.error("Failed to save snapshot for display \(self.displayID): \(error)", category: .persistence)
@@ -300,22 +305,7 @@ struct Redactor {
         
         guard let observations = request.results else { return cgImage }
         
-        // Define Sensitive Patterns
-        // 1. Credit Card (Luhn-like 16 digits) -> Simple regex for now: \b\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{4}\b
-        // 2. IBAN (TR starting) -> \bTR\d{2}[ ]\d{4}\b
-        // 3. Keywords: "Password", "Parola", "Şifre"
-        
-        let sensitivePatterns = [
-            #"\b\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{4}\b"#, // Credit Card formatting
-            #"\bTR\d{2}[ ]?\d{4}[ ]?\d{4}[ ]?\d{4}[ ]?\d{2}\b"#, // TR IBAN
-            #"(?i)password"#,
-            #"(?i)parola"#,
-            #"(?i)şifre"#,
-            #"(?i)api key"#,
-            #"(?i)bearer"#,
-            #"(?i)secret"#,
-            #"(?i)private key"#
-        ]
+        let sensitivePatterns = PrivacyGuard.shared.sensitivePatterns
         
         var rectsToRedact: [CGRect] = []
         let width = CGFloat(cgImage.width)

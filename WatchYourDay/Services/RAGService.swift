@@ -2,8 +2,6 @@
 //  RAGService.swift
 //  WatchYourDay
 //
-//  Phase 2: RAG - Retrieval Augmented Generation Pipeline
-//
 
 import Foundation
 import SwiftData
@@ -130,37 +128,7 @@ actor RAGService {
     
     // MARK: - Generate Response
     private func generateResponse(prompt: String) async throws -> String {
-        let defaults = UserDefaults.standard
-        let baseURL = defaults.string(forKey: "localBaseURL") ?? "http://localhost:11434"
-        let modelName = defaults.string(forKey: "localModelName") ?? "llama3"
-        
-        let url = URL(string: "\(baseURL)/api/generate")!
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 60
-        
-        let payload: [String: Any] = [
-            "model": modelName,
-            "prompt": prompt,
-            "stream": false
-        ]
-        
-        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            throw RAGError.llmFailed
-        }
-        
-        struct LLMResponse: Decodable {
-            let response: String
-        }
-        
-        let result = try JSONDecoder().decode(LLMResponse.self, from: data)
-        return result.response
+        return try await AIService.shared.generateResponse(prompt: prompt)
     }
     
     // MARK: - Index Snapshot (for embedding new data)

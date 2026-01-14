@@ -13,8 +13,11 @@ actor ImageStorageManager {
     
     private var rootDirectory: URL {
         let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
-        let appSupport = paths.first!.appendingPathComponent("WatchYourDay", isDirectory: true)
-        return appSupport.appendingPathComponent("Snapshots", isDirectory: true)
+        guard let appSupport = paths.first else {
+            // Fallback to tmp if AppSupport is somehow missing (Should not happen in valid Sandbox)
+            return FileManager.default.temporaryDirectory.appendingPathComponent("WatchYourDay_Fallback")
+        }
+        return appSupport.appendingPathComponent("WatchYourDay/Snapshots", isDirectory: true)
     }
     
     init() {
