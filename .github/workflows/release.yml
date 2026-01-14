@@ -29,6 +29,9 @@ jobs:
             -destination 'platform=macOS,arch=arm64' \
             -configuration Release \
             -archivePath build/WatchYourDay.xcarchive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
             archive
           
           # 2. Export (Ad-Hoc / Copy) - extracting the .app directly
