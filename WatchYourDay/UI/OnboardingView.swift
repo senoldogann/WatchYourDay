@@ -19,16 +19,20 @@ struct OnboardingView: View {
                 PermissionsPage(permissionManager: permissionManager)
                     .tag(1)
                 
-                // Page 3: Configuration (Auto-Start)
-                ConfigurationPage()
+                // Page 3: AI Setup
+                AISetupView()
                     .tag(2)
                 
-                // Page 4: Finish
+                // Page 4: Configuration (Auto-Start)
+                ConfigurationPage()
+                    .tag(3)
+                
+                // Page 5: Finish
                 FinishPage(onFinish: {
                     hasCompletedOnboarding = true
                     onFinish()
                 })
-                .tag(3)
+                .tag(4)
             }
             // Note: .tabViewStyle(.page) is iOS-only. macOS uses default tab styling.
             
@@ -43,7 +47,7 @@ struct OnboardingView: View {
                 
                 Spacer()
                 
-                if currentPage < 3 {
+                if currentPage < 4 {
                     Button("Next") {
                         withAnimation { currentPage += 1 }
                     }
