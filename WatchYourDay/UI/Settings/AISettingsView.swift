@@ -103,9 +103,8 @@ struct AISettingsView: View {
                 .background(Color.claudeAccent)
                 .foregroundStyle(.white)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-            .buttonStyle(.plain)
-            .disabled(isTestingConnection)
+                .buttonStyle(.plain)
+                .disabled(isTestingConnection)
             
             if showingTestResult {
                 Text(testResultMessage)
