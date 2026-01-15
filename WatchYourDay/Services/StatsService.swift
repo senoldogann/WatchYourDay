@@ -34,8 +34,9 @@ actor StatsService {
     
     /// Calculate daily usage statistics grouped by app
     /// Calculate daily usage statistics grouped by app
-    func calculateDailyStats(for date: Date) -> [AppUsageStat] {
-        let snapshots = fetchSnapshots(for: date)
+    /// Calculate usage statistics for a specific date range
+    func calculateStats(from startDate: Date, to endDate: Date) -> [AppUsageStat] {
+        let snapshots = fetchSnapshots(from: startDate, to: endDate)
         guard !snapshots.isEmpty else { return [] }
         
         var appDurations: [String: TimeInterval] = [:]
@@ -49,6 +50,7 @@ actor StatsService {
             let current = snapshots[i]
             let next = snapshots[i+1]
             
+            // Should verify gaps don't span across days inexplicably, but maxGap handles it
             let gap = next.timestamp.timeIntervalSince(current.timestamp)
             let duration = min(gap, maxGap)
             
@@ -57,7 +59,7 @@ actor StatsService {
             appCategories[current.appName] = current.category
         }
         
-        // Add last snapshot (assume minimal duration, e.g., 5s)
+        // Add last snapshot
         if let last = snapshots.last {
             appDurations[last.appName, default: 0] += 5
             appCategories[last.appName] = last.category
@@ -72,6 +74,14 @@ actor StatsService {
         }.sorted { $0.durationSeconds > $1.durationSeconds }
     }
     
+    /// Legacy support for single day
+    func calculateDailyStats(for date: Date) -> [AppUsageStat] {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: date)
+        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return [] }
+        return calculateStats(from: start, to: end)
+    }
+    
     func getTotalRecordedTime(for date: Date) -> TimeInterval {
         let stats = calculateDailyStats(for: date)
         return stats.reduce(0) { $0 + $1.durationSeconds }
@@ -84,13 +94,12 @@ actor StatsService {
         for stat in stats {
             breakdown[stat.category, default: 0] += stat.durationSeconds
         }
-        
-        // Convert seconds to minutes for easier reading? Or keep as seconds.
-        // Let's keep as seconds for consistency with type Double
         return breakdown
     }
     
     func calculateHourlyFocus(for date: Date) -> [(Int, Double)] {
+        // Hourly focus logic assumes a single day context usually, keep as is or expand if needed
+        // For now, let's keep it daily centered as hourly graphs usually show one day
         let snapshots = fetchSnapshots(for: date)
         guard !snapshots.isEmpty else { return [] }
         
@@ -117,17 +126,25 @@ actor StatsService {
         }
     }
     
+    /// Calculate reporting data for a specific range (e.g. Last 7 Days)
+    func calculateReportingData(from startDate: Date, to endDate: Date) -> ReportingData? {
+        let stats = calculateStats(from: startDate, to: endDate)
+        guard !stats.isEmpty else { return nil }
+        
+        return generateReport(from: stats)
+    }
+    
+    /// Output for a single day
     func calculateReportingData(for date: Date) -> ReportingData? {
         let stats = calculateDailyStats(for: date)
         guard !stats.isEmpty else { return nil }
         
+        return generateReport(from: stats)
+    }
+    
+    private func generateReport(from stats: [AppUsageStat]) -> ReportingData {
         let totalTime = stats.reduce(0) { $0 + $1.durationSeconds }
         let totalMinutes = Int(totalTime / 60)
-        
-        // Focus Score (Weighted Average)
-        // Assume categories "Productive", "Developer", "Work" are 100%
-        // "Communication" is 50%
-        // "Entertainment" is 0%
         
         var weightedSum: Double = 0
         
@@ -136,36 +153,45 @@ actor StatsService {
             switch stat.category.lowercased() {
             case "productive", "developer", "work", "coding", "design": weight = 1.0
             case "communication", "email", "messaging": weight = 0.5
-            default: weight = 0.0 // Entertainment, Social etc.
+            default: weight = 0.0
             }
+            // Bonus points for explicit productive apps
+            if isProductiveApp(stat.appName) { weight = 1.0 }
+            
             weightedSum += stat.durationSeconds * weight
         }
         
         let focusScore = totalTime > 0 ? (weightedSum / totalTime) * 100 : 0
-        
         let topApps = stats.prefix(5).map { $0.appName }
         
-        // Convert category breakdown to [String: Int] (minutes)
-        let catBreakdown = calculateCategoryBreakdown(for: date).mapValues { Int($0 / 60) }
+        // Calculate breakdown from stats directly
+        var catBreakdown: [String: Int] = [:]
+        for stat in stats {
+             catBreakdown[stat.category, default: 0] += Int(stat.durationSeconds / 60)
+        }
         
         return ReportingData(
             focusScore: focusScore,
             totalMinutes: totalMinutes,
             topApps: topApps,
             categoryCounts: catBreakdown,
-            textSegments: [] // OCR Text aggregation is heavy, skipping for now
+            textSegments: []
         )
     }
     
     // MARK: - Private Helpers
+    
     private func fetchSnapshots(for date: Date) -> [Snapshot] {
         let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: date)
-        guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else { return [] }
-        
+        let start = calendar.startOfDay(for: date)
+        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return [] }
+        return fetchSnapshots(from: start, to: end)
+    }
+    
+    private func fetchSnapshots(from start: Date, to end: Date) -> [Snapshot] {
         // Use ModelContext directly from the actor
         let predicate = #Predicate<Snapshot> { snap in
-            snap.timestamp >= startOfDay && snap.timestamp < endOfDay
+            snap.timestamp >= start && snap.timestamp < end
         }
         let descriptor = FetchDescriptor<Snapshot>(predicate: predicate, sortBy: [SortDescriptor(\.timestamp)])
         
@@ -179,13 +205,16 @@ actor StatsService {
 
     // MARK: - Helpers
     private func isProductiveApp(_ appName: String) -> Bool {
-        let productiveApps = ["Xcode", "VS Code", "Terminal", "Cursor", "Slack", "Figma", "Sketch", "Notion", "Obsidian"]
+        let productiveApps = [
+            "Xcode", "VS Code", "Terminal", "Cursor", "Slack", "Figma", 
+            "Sketch", "Notion", "Obsidian", "Arc", "Safari", "Developer", 
+            "Simulator", "Preview", "TextEdit", "Python", "Code"
+        ]
         return productiveApps.contains(where: { appName.localizedCaseInsensitiveContains($0) })
     }
     
     private func classifyCategory(app: String, rawCategory: String) -> String {
         if isProductiveApp(app) { return "Productive" }
-        // Fallback to existing logic or raw category
         return rawCategory.capitalized
     }
 }

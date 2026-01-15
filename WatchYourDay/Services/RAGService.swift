@@ -92,26 +92,47 @@ actor RAGService {
     }
     
     // MARK: - Build Context from Snapshots
+    // MARK: - Build Context from Snapshots
     private func buildContextFromSnapshots(modelContext: ModelContext) async throws -> String {
-        // Create a StatsService instance with the given ModelContext
         let statsService = StatsService(modelContainer: modelContext.container)
-        let today = Date()
+        let now = Date()
+        let calendar = Calendar.current
         
-        guard let stats = await statsService.calculateReportingData(for: today) else {
-             return "No activity data recorded today."
+        // 1. Context: Today (Immediate context)
+        var context = "--- CURRENT ACTIVITY CONTEXT ---\n"
+        
+        if let todayStats = await statsService.calculateReportingData(for: now) {
+            context += "Today (\(now.formatted(date: .abbreviated, time: .omitted))):\n"
+            context += "• Total Time: \(todayStats.totalMinutes) min\n"
+            context += String(format: "• Focus Score: %.1f%%\n", todayStats.focusScore)
+            context += "• Top Apps: \(todayStats.topApps.joined(separator: ", "))\n"
+        } else {
+            context += "Today: No significant activity recorded yet (Day just started?)\n"
         }
         
-        var context = "Today's Activity Summary (\(today.formatted(date: .abbreviated, time: .omitted))):\n"
-        context += "Total Time Recorded: \(stats.totalMinutes) minutes\n"
-        context += String(format: "Focus Score: %.1f%%\n\n", stats.focusScore)
-        
-        context += "Top Applications (by duration):\n"
-        for (app, minutes) in stats.categoryCounts.sorted(by: { $0.value > $1.value }).prefix(10) {
-             context += "- \(app): \(minutes) minutes\n"
+        // 2. Context: Yesterday (Recent context, useful if early morning)
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
+           let yesterdayStats = await statsService.calculateReportingData(for: yesterday) {
+            context += "\nYesterday (\(yesterday.formatted(date: .abbreviated, time: .omitted))):\n"
+            context += "• Total Time: \(yesterdayStats.totalMinutes) min\n"
+            context += "• Focus Score: \(String(format: "%.1f", yesterdayStats.focusScore))%\n"
+            context += "• Top Apps: \(yesterdayStats.topApps.joined(separator: ", "))\n"
         }
         
-        // Also add top 5 apps list specifically for clarity
-        context += "\nMost Used Apps: " + stats.topApps.joined(separator: ", ") + "\n"
+        // 3. Context: Last 7 Days (Global Trends)
+        if let sevenDaysAgo = calendar.date(byAdding: .day, value: -7, to: now),
+           let weeklyStats = await statsService.calculateReportingData(from: sevenDaysAgo, to: now) {
+            context += "\n--- WEEKLY OVERVIEW (Last 7 Days) ---\n"
+            context += "• Total Recorded Time: \(weeklyStats.totalMinutes / 60) hours \(weeklyStats.totalMinutes % 60) min\n"
+            context += "• Average Focus Score: \(String(format: "%.1f", weeklyStats.focusScore))%\n"
+            context += "• Most Used Apps: \(weeklyStats.topApps.joined(separator: ", "))\n"
+            
+            context += "• Category Breakdown:\n"
+            let sortedCats = weeklyStats.categoryCounts.sorted { $0.value > $1.value }.prefix(5)
+            for (cat, mins) in sortedCats {
+                context += "  - \(cat): \(mins) min\n"
+            }
+        }
         
         return context
     }

@@ -18,22 +18,40 @@ struct AboutSettingsView: View {
                 .foregroundStyle(Color.gray)
             
             if updateService.isUpdateAvailable, let release = updateService.latestRelease {
-                VStack(spacing: 6) {
-                    Text("New Version Available: \(release.tagName)")
-                        .font(.headline)
-                        .foregroundStyle(.green)
-                    
-                    Link(destination: URL(string: release.htmlUrl)!) {
-                        HStack {
-                            Image(systemName: "arrow.down.circle.fill")
-                            Text("Download Update")
+                    VStack(spacing: 8) {
+                        Text("New Version Available: \(release.tagName)")
+                            .font(.headline)
+                            .foregroundStyle(.green)
+                        
+                        if let error = updateService.errorMessage {
+                            Text(error)
+                                .font(.caption2)
+                                .foregroundStyle(.red)
+                                .multilineTextAlignment(.center)
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.green.opacity(0.1))
-                        .clipShape(Capsule())
+                        
+                        Button(action: {
+                            Task {
+                                await updateService.downloadAndInstallUpdate()
+                            }
+                        }) {
+                            HStack {
+                                if updateService.isDownloading {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
+                                }
+                                Text(updateService.isDownloading ? "Installing..." : "Update & Restart")
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.green.opacity(0.1))
+                            .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(updateService.isDownloading)
                     }
-                }
                 .padding(.top, 8)
             } else {
                 Button("Check for Updates") {
